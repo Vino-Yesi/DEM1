@@ -1,0 +1,12 @@
+{
+  "name": "wms-sql-contract-validation",
+  "private": true,
+  "type": "module",
+  "version": "2026.1.0",
+  "scripts": {
+    "validate": "node validate_sql.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.16"
+  }
+}

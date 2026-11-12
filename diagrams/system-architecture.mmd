@@ -1,0 +1,91 @@
+flowchart LR
+  classDef client fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e;
+  classDef edge fill:#fef3c7,stroke:#b45309,color:#7c2d12;
+  classDef isolation fill:#ede9fe,stroke:#6d28d9,color:#4c1d95;
+  classDef service fill:#dcfce7,stroke:#15803d,color:#14532d;
+  classDef store fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+  classDef bus fill:#ffedd5,stroke:#c2410c,color:#7c2d12;
+
+  subgraph C["Client-facing API segmentation"]
+    direction TB
+    OMS["B2C OMS<br/>storefront + OMS"]
+    ERP["B2B ERP<br/>EDI + ASN"]
+    PORTAL["3PL client portal<br/>inventory + invoice views"]
+    DEVICES["RF / AMR / forklift<br/>task and telemetry APIs"]
+  end
+
+  subgraph E["Edge and tenant resolution"]
+    direction TB
+    GW["API Gateway<br/>OIDC, mTLS, scopes, CIDR,<br/>rate limit, idempotency key"]
+    CTX["TenantContext<br/>X-Tenant-ID + X-Client-ID<br/>app.current_tenant_id"]
+  end
+
+  subgraph I["3PL isolation layers"]
+    direction TB
+    RLS["PostgreSQL RLS<br/>forced tenant_id policies"]
+    WF["Workflow registry<br/>tenant-specific picking rules"]
+    CONTRACTS["Tenant contracts<br/>rate cards + VAS catalog"]
+    SILO["Siloed inventory<br/>tenant, lot, serial, expiry, status"]
+    CLIENTS["tenant_api_clients<br/>scopes, modes, CIDRs"]
+  end
+
+  subgraph S["Orchestrator microservices"]
+    direction TB
+    ROUTE["Order intake + hybrid routing"]
+    WAVE["Wave + affinity planner"]
+    ALLOC["Allocation + inventory engine"]
+    TASKS["Task dispatcher + labour queue"]
+    TWIN["Digital twin exception engine"]
+    PUTAWAY["Directed putaway + cross-dock"]
+    BILLING["Billing + VAS engine"]
+    RELAY["Transactional outbox relay"]
+  end
+
+  subgraph D["State and messaging"]
+    direction TB
+    PG[("PostgreSQL 16+<br/>wms schema, partitions,<br/>RLS, ledger, outbox")]
+    REDIS[("Redis<br/>worker task pushes")]
+    KAFKA[("Kafka event bus<br/>wms.* topics")]
+  end
+
+  OMS --> GW
+  ERP --> GW
+  PORTAL --> GW
+  DEVICES --> GW
+  GW --> CTX
+  CTX --> ROUTE
+  CTX --> PUTAWAY
+  CTX --> TWIN
+  CTX --> BILLING
+  CLIENTS --> GW
+  RLS --> PG
+  WF --> ROUTE
+  WF --> WAVE
+  CONTRACTS --> BILLING
+  SILO --> ALLOC
+  ROUTE --> WAVE
+  WAVE --> ALLOC
+  ALLOC --> TASKS
+  ROUTE --> PUTAWAY
+  TWIN --> ALLOC
+  TWIN --> TASKS
+  BILLING --> PG
+  ROUTE --> PG
+  WAVE --> PG
+  ALLOC --> PG
+  TASKS --> PG
+  TWIN --> PG
+  PUTAWAY --> PG
+  RELAY --> PG
+  TASKS --> REDIS
+  REDIS --> DEVICES
+  RELAY --> KAFKA
+  KAFKA --> TWIN
+  KAFKA --> BILLING
+
+  class OMS,ERP,PORTAL,DEVICES client;
+  class GW,CTX edge;
+  class RLS,WF,CONTRACTS,SILO,CLIENTS isolation;
+  class ROUTE,WAVE,ALLOC,TASKS,TWIN,PUTAWAY,BILLING,RELAY service;
+  class PG,REDIS store;
+  class KAFKA bus;

@@ -1,0 +1,16 @@
+{
+  "name": "wms-mermaid-validation",
+  "private": true,
+  "type": "module",
+  "version": "2026.1.0",
+  "scripts": {
+    "validate": "node parse.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "jsdom": "^26.0.0",
+    "mermaid": "12.3.0"
+  }
+}
