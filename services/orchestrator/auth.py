@@ -32,6 +32,25 @@ def _required_header(request: Request, name: str) -> str:
     return value.strip()
 
 
+def _resolve_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        first = forwarded.split(",", 1)[0].strip()
+        if first:
+            return first
+
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        cleaned = real_ip.strip()
+        if cleaned:
+            return cleaned
+
+    client = request.client
+    if client is not None:
+        return client.host or ""
+    return ""
+
+
 def get_tenant_context(request: Request) -> TenantContext:
     tenant_raw = _required_header(request, "X-Tenant-Id")
     client_id = _required_header(request, "X-Client-Id")
@@ -53,17 +72,12 @@ def get_tenant_context(request: Request) -> TenantContext:
 
     raw_scopes = request.headers.get("X-Scopes", "")
     scopes = frozenset(item.strip() for item in raw_scopes.split(",") if item.strip())
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        client_ip = forwarded.split(",", 1)[0].strip()
-    else:
-        client_ip = request.client.host if request.client else ""
     return TenantContext(
         tenant_id=tenant_id,
         client_id=client_id,
         scopes=scopes,
         idempotency_key=idempotency_key,
-        client_ip=client_ip,
+        client_ip=_resolve_client_ip(request),
     )
 
 
