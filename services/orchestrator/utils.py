@@ -30,8 +30,12 @@ def sha256_json(value: Any) -> str:
 
 
 def to_decimal(value: Any) -> Decimal:
+    if value is None or value == "":
+        return Decimal("0")
     if isinstance(value, Decimal):
         return value
+    if isinstance(value, bool):
+        return Decimal(int(value))
     return Decimal(str(value))
 
 
